@@ -1,0 +1,82 @@
+name: node-red build & push images
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+on:
+  push:
+    # Publish semver tags as releases.
+    tags: [ 'node-red*' ]
+    paths:
+      - 'node-red/Dockerfile'  
+      - '.github/workflows/node-red-ci.yml'
+  pull_request:
+    paths:
+      - 'node-red/Dockerfile'  
+      - '.github/workflows/node-red-ci.yml'
+
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3.2.0 # v3
+        with:
+          platforms: linux/amd64,linux/arm64
+      # Set up BuildKit Docker container builder to be able to build
+      # multi-platform images and export cache
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3 # v3
+        with:
+          version: latest
+          driver-opts: network=host
+
+      # Login against a Docker registry except on PR
+      # https://github.com/docker/login-action
+      - name: Log into dockerhub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3 # v3.0.0
+        with:
+          username: ${{ secrets.DOCKER_USER_NAME }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
+      # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5 # v5.0.0
+        with:
+          images: ichn/node-red
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=match,pattern=node-red-(.*),group=1
+
+      # Build and push Docker image with Buildx (don't push on PR)
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v6 # v5.0.0
+        with:
+          context: ./node-red
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

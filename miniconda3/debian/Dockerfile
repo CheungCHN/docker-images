@@ -27,7 +27,7 @@ ENV PATH /opt/conda/bin:$PATH
 CMD [ "/bin/bash" ]
 
 # Leave these args here to better use the Docker build cache
-ARG CONDA_VERSION=py311_23.11.0-2
+ARG CONDA_VERSION=py312_24.5.0-0
 
 RUN set -x && \
     UNAME_M="$(uname -m)" && \

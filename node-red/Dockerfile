@@ -40,7 +40,7 @@ FROM base AS build
 # Install Build tools
 RUN apk add --no-cache --virtual buildtools build-base linux-headers udev python3 && \
     npm install --unsafe-perm --no-update-notifier --no-fund --only=production && \
-    sh /tmp/remove_native_gpio.sh
+    /tmp/remove_native_gpio.sh
 
 #### Stage RELEASE #####################################################################################################
 FROM base AS RELEASE
@@ -66,7 +66,7 @@ LABEL org.label-schema.build-date=${BUILD_DATE} \
 COPY --from=build /usr/src/node-red/node_modules ./node_modules
 
 # Chown, install devtools & Clean up
-RUN sh /tmp/install_devtools.sh && \
+RUN /tmp/install_devtools.sh && \
     rm -r /tmp/*
 
 RUN npm config set cache /data/.npm --global && \
